@@ -8,46 +8,52 @@ import numpy as np
 import sklearn
 from keras.layers import Dense, Flatten, Lambda, Dropout, Cropping2D
 from keras.layers.convolutional import Conv2D
-from keras.layers.pooling import MaxPooling2D
+import tensorflow as tf
 from keras.models import Sequential
 import matplotlib.pyplot as plt
 
 
-def train(data_path):
-    batch_size = 64
-    train_samples, validation_samples = make_samples(data_path)
+def train(data_paths):
+    '''
+    train the model by the data providing from data_paths.
+     
+    :param data_paths: it's a list of dataset folders.
+    
+    the code will load  the 'driving_log.csv' for each input folder,
+    and this csv file should record the image by relative path, *NOT absolute path*.
+     
+    If the image is not exist, will raise a FileNotFound exception before training.
+    '''
+    batch_size = 32
+    if type(data_paths) is str:
+        data_paths = [data_paths]
+    train_samples, validation_samples = [], []
+    for data_path in data_paths:
+        train_data, validation_data = make_samples(data_path)
+        train_samples.extend(train_data)
+        validation_samples.extend(validation_data)
+
     train_generator = generator(train_samples, batch_size)
     validation_generator = generator(validation_samples, batch_size)
 
     ch, row, col = 3, 160, 320  # Trimmed image format
 
     model = Sequential()
-    # Preprocess incoming data, centered around zero with small standard deviation
+    model.add(Cropping2D(cropping=((40, 25), (0, 0)), input_shape=(row, col, ch)))
+    model.add(Lambda(lambda x: tf.image.resize_images(x, (66, 200))))  # resize image
     model.add(Lambda(lambda x: x / 127.5 - 1.,
-                     input_shape=(row, col, ch),
-                     output_shape=(row, col, ch)))
-    model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=(160, 320, 3)))
-
-    model.add(Conv2D(24, (5, 5), padding='same', activation='relu', subsample=(2, 2)))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(1, 1)))
-
-    model.add(Conv2D(36, (5, 5), padding='same', activation='relu', subsample=(2, 2)))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(1, 1)))
-    
-    model.add(Conv2D(48, (5, 5), padding='same', activation='relu', subsample=(2, 2)))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(1, 1)))
-   
-    model.add(Conv2D(64, (3, 3), padding='same', activation='relu', subsample=(1, 1)))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(1, 1)))
-    
-    model.add(Conv2D(64, (3, 3), padding='same', activation='relu', subsample=(1, 1)))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(1, 1)))
+                     input_shape=(66, 200, 3),
+                     output_shape=(66, 200, 3)))
+    model.add(Conv2D(kernel_size=(5, 5), filters=24, padding='valid', activation='relu', strides=(2, 2), use_bias=True))
+    model.add(Conv2D(kernel_size=(5, 5), filters=36, padding='valid', activation='relu', strides=(2, 2), use_bias=True))
+    model.add(Conv2D(kernel_size=(5, 5), filters=48, padding='valid', activation='relu', strides=(2, 2), use_bias=True))
+    model.add(Conv2D(kernel_size=(3, 3), filters=64, padding='valid', activation='relu', strides=(1, 1), use_bias=True))
+    model.add(Conv2D(kernel_size=(3, 3), filters=64, padding='valid', activation='relu', strides=(1, 1), use_bias=True))
    
     model.add(Flatten())
     model.add(Dense(1164, activation='relu'))
     model.add(Dense(100, activation='relu'))
-    model.add(Dense(50, activation='relu'))git stauts
-    
+    model.add(Dense(50, activation='relu'))
     model.add(Dense(10, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(1, activation='tanh'))
@@ -75,8 +81,17 @@ def train(data_path):
 
 
 def make_samples(data_path):
+    '''
+    make samples for data_path folder.
+    and will return the training samples and validate sample by 4:1.
+    
+    the data will augmentation by flip, it's a attribute in one sample.
+    
+    :param data_path: it's a folder includes 'driving_log.csv' file. 
+    :return training_samples, validate_samples.
+    '''
     samples = []
-    csv_file = os.path.join(data_path + "driving_log.csv")
+    csv_file = os.path.join(data_path, "driving_log.csv")
     skip_line = True
     with open(csv_file) as f:
         reader = csv.reader(f)
@@ -85,8 +100,10 @@ def make_samples(data_path):
                 skip_line = False
                 continue
             for image_index in range(3):
-                # path = os.path.join(data_path, line[image_index])
-                path = line[image_index]
+                path = "".join(line[image_index].split())
+                path = os.path.join(data_path, path)
+                if not os.path.exists(path):
+                    raise FileNotFoundError(path)
                 line[image_index] = ''.join(path.split())
                 angle = float(line[3])
                 if image_index == 1:
@@ -105,6 +122,13 @@ def make_samples(data_path):
 
 
 def generator(samples, batch_size=128):
+    '''
+    it's a generator for sampling.
+    
+    :param samples: the whole datasets for training or validation 
+    :param batch_size: batch size
+    :return: yield a batch sample
+    '''
     num_samples = len(samples)
 
     while 1:  # Loop forever so the generator never terminates
@@ -134,4 +158,4 @@ def generator(samples, batch_size=128):
 
 
 if __name__ == "__main__":
-    train('/home/bill/Pictures/')
+    train(['/dataset/pj3-1/', '/dataset/pj3-2/', '/dataset/pj3-origin/'])
