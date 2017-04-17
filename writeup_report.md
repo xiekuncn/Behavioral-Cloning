@@ -112,3 +112,9 @@ I finally randomly shuffled the data set and put 25% of the data into a validati
 I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was 3 as the loss is not going down. 
 I used an adam optimizer so that manually training the learning rate wasn't necessary.
 
+## Final result
+
+the download link is [here](https://pan.baidu.com/s/1dEBdnY5) for model.h5.
+
+and the video for demotration is here.
+
