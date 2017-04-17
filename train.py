@@ -11,6 +11,7 @@ from keras.layers.convolutional import Conv2D
 import tensorflow as tf
 from keras.models import Sequential
 import matplotlib.pyplot as plt
+import keras
 
 
 def train(data_paths):
@@ -24,7 +25,7 @@ def train(data_paths):
      
     If the image is not exist, will raise a FileNotFound exception before training.
     '''
-    batch_size = 32
+    batch_size = 128
     if type(data_paths) is str:
         data_paths = [data_paths]
     train_samples, validation_samples = [], []
@@ -40,7 +41,7 @@ def train(data_paths):
 
     model = Sequential()
     model.add(Cropping2D(cropping=((40, 25), (0, 0)), input_shape=(row, col, ch)))
-    model.add(Lambda(lambda x: tf.image.resize_images(x, (66, 200))))  # resize image
+    model.add(Lambda(lambda x: keras.layers.core.K.tf.image.resize_images(x, (66, 200))))  # resize image
     model.add(Lambda(lambda x: x / 127.5 - 1.,
                      input_shape=(66, 200, 3),
                      output_shape=(66, 200, 3)))
@@ -64,20 +65,20 @@ def train(data_paths):
                                          steps_per_epoch=len(train_samples),
                                          validation_data=validation_generator,
                                          validation_steps=len(validation_samples),
-                                         epochs=3,
-                                         verbose=1)
+                                         epochs=3)
+    model.save("model.h5")
     print(history_object.history.keys())
 
     ### plot the training and validation loss for each epoch
-    plt.plot(history_object.history['loss'])
-    plt.plot(history_object.history['val_loss'])
-    plt.title('model mean squared error loss')
-    plt.ylabel('mean squared error loss')
-    plt.xlabel('epoch')
-    plt.legend(['training set', 'validation set'], loc='upper right')
-    plt.show()
+    # plt.plot(history_object.history['loss'])
+    # plt.plot(history_object.history['val_loss'])
+    # plt.title('model mean squared error loss')
+    # plt.ylabel('mean squared error loss')
+    # plt.xlabel('epoch')
+    # plt.legend(['training set', 'validation set'], loc='upper right')
+    # plt.show()
 
-    model.save("model.h5")
+
 
 
 def make_samples(data_path):
